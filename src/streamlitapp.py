@@ -5,6 +5,7 @@ from PIL import Image
 import requests
 from io import BytesIO
 import zipfile
+import os
 
 from myConst import DATASET_NAME, MODEL_NAME
 
@@ -16,6 +17,11 @@ st.set_page_config(page_title="Recommandation d'Événements",
 
 def unzip_dataset():
     zip_file = "datasets.zip"
+
+    # Vérifier si le dossier de destination existe déjà
+    if os.path.exists("datasets"):
+        return f"❌ Erreur : Le dossier 'datasets' existe déjà."
+
     try:
         with zipfile.ZipFile(zip_file, "r") as zip_ref:
             zip_ref.extractall(".")
