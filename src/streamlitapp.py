@@ -4,6 +4,7 @@ import pickle
 from PIL import Image
 import requests
 from io import BytesIO
+import zipfile
 
 from myConst import DATASET_NAME, MODEL_NAME
 
@@ -12,6 +13,18 @@ st.set_page_config(page_title="Recommandation d'Événements",
                    page_icon="🎭",
                    layout="wide",
                    initial_sidebar_state="expanded")
+
+def unzip_dataset():
+    zip_file = "datasets.zip"
+    try:
+        with zipfile.ZipFile(zip_file, "r") as zip_ref:
+            zip_ref.extractall(".")
+        print(f"✅ Extraction réussie dans '{"."}' !")
+    except FileNotFoundError:
+        print("❌ Erreur : Le fichier ZIP n'existe pas.")
+    except zipfile.BadZipFile:
+        print("❌ Erreur : Le fichier n'est pas un ZIP valide.")
+unzip_dataset()
 
 # Fonction pour charger les données
 @st.cache_data
