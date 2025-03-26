@@ -13,7 +13,8 @@ from myConst import DATASET_NAME, MODEL_NAME
 st.set_page_config(page_title="Recommandation d'Événements",
                    page_icon="🎭",
                    layout="wide",
-                   initial_sidebar_state="expanded")
+                   initial_sidebar_state="collapsed")
+
 
 def unzip_dataset():
     zip_file = "datasets.zip"
@@ -30,7 +31,10 @@ def unzip_dataset():
         print("❌ Erreur : Le fichier ZIP n'existe pas.")
     except zipfile.BadZipFile:
         print("❌ Erreur : Le fichier n'est pas un ZIP valide.")
+
+
 unzip_dataset()
+
 
 # Fonction pour charger les données
 @st.cache_data
@@ -49,6 +53,7 @@ def load_data():
         st.error(f"Erreur lors du chargement des données: {e}")
         return None, None
 
+
 # Fonction pour charger une image depuis une URL
 def load_image_from_url(url):
     """Charge une image depuis une URL avec gestion d'erreurs"""
@@ -59,7 +64,7 @@ def load_image_from_url(url):
         img = Image.open(BytesIO(response.content))
         return img
     except Exception as e:
-        st.warning(f"Impossible de charger l'image depuis l'URL: {url}")
+        print(f"Impossible de charger l'image depuis l'URL: {url}")
         return None
 
 
@@ -110,9 +115,6 @@ def display_event(event_row, col):
             if 'PRIMARY_EVENT_URL' in event_row and not pd.isna(event_row['PRIMARY_EVENT_URL']):
                 st.markdown(f"[Voir plus de détails]({event_row['PRIMARY_EVENT_URL']})")
 
-            # Séparateur
-            st.markdown("---")
-
             # Description (sous un expander)
             if 'EVENT_INFO' in event_row and not pd.isna(event_row['EVENT_INFO']):
                 with st.expander("Voir la description"):
@@ -138,51 +140,39 @@ if df is not None and similarity_dict is not None:
     events_with_recommendations = list(similarity_dict.keys())
     filtered_df = df[df['EVENT_ID'].isin(events_with_recommendations)]
 
-    # Créer un widget de recherche
-    st.sidebar.header("Rechercher un événement")
-
-    # Options de filtrage
-    st.sidebar.subheader("Filtres")
-
-    # Filtre par catégorie
-    if 'CLASSIFICATION_SEGMENT' in df.columns:
-        categories = ["Tous"] + sorted(df['CLASSIFICATION_SEGMENT'].dropna().unique().tolist())
-        selected_category = st.sidebar.selectbox("Catégorie", categories)
-
-        if selected_category != "Tous":
-            filtered_df = filtered_df[filtered_df['CLASSIFICATION_SEGMENT'] == selected_category]
-
-    # Filtre par ville
-    if 'VENUE_CITY' in df.columns:
-        cities = ["Toutes"] + sorted(df['VENUE_CITY'].dropna().unique().tolist())
-        selected_city = st.sidebar.selectbox("Ville", cities)
-
-        if selected_city != "Toutes":
-            filtered_df = filtered_df[filtered_df['VENUE_CITY'] == selected_city]
-
-    # Recherche par nom
-    search_term = st.sidebar.text_input("Rechercher par nom", "")
-    if search_term:
-        filtered_df = filtered_df[filtered_df['EVENT_NAME'].str.contains(search_term, case=False, na=False)]
-
-    # Afficher le nombre d'événements trouvés
-    st.sidebar.info(f"{len(filtered_df)} événements trouvés")
-
-    # Liste des événements (limité à 50 pour éviter de surcharger l'interface)
-    event_list = filtered_df.head(50)
-
-    if len(event_list) > 0:
+    if len(filtered_df) > 0:
         # Créer un selectbox avec les événements
-        event_options = event_list['EVENT_NAME'].tolist()
-        selected_event_name = st.selectbox("Choisissez un événement", event_options)
+        st.markdown("## 👇 Sélectionnez un événement")
+        event_options = filtered_df['EVENT_NAME'].tolist()
+        selected_event_name = st.selectbox("", event_options)
+
+        # Séparateur visuel
+        st.markdown("---")
 
         # Trouver l'événement sélectionné
-        selected_event = event_list[event_list['EVENT_NAME'] == selected_event_name].iloc[0]
+        selected_event = filtered_df[filtered_df['EVENT_NAME'] == selected_event_name].iloc[0]
         selected_event_id = selected_event['EVENT_ID']
 
-        # Afficher l'événement sélectionné
-        st.header("Événement sélectionné")
-        display_event(selected_event, st.container())
+        # Afficher l'événement sélectionné avec un style distinctif
+        st.markdown("## ✨ Votre événement sélectionné")
+
+        # Utiliser une couleur de fond pour mettre en évidence l'événement sélectionné
+        with st.container():
+            st.markdown("""
+            <style>
+            .selected-event {
+                background-color: #f0f2f6;
+                padding: 20px;
+                border-radius: 10px;
+                margin-bottom: 20px;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+            with st.container():
+                st.markdown('<div class="selected-event">', unsafe_allow_html=True)
+                display_event(selected_event, st.container())
+                st.markdown('</div>', unsafe_allow_html=True)
 
         # Obtenir les événements similaires
         if selected_event_id in similarity_dict:
@@ -197,8 +187,8 @@ if df is not None and similarity_dict is not None:
                     if not event.empty:
                         ordered_similar_events = pd.concat([ordered_similar_events, event])
 
-                # Afficher les événements similaires
-                st.header("Événements similaires recommandés")
+                # Afficher les événements similaires avec un style distinctif
+                st.markdown("## 🔍 Événements similaires recommandés")
 
                 # Créer une grille de 2 colonnes pour afficher les événements
                 cols = st.columns(2)
@@ -214,11 +204,9 @@ if df is not None and similarity_dict is not None:
         else:
             st.warning("Aucune recommandation disponible pour cet événement.")
     else:
-        st.warning("Aucun événement ne correspond aux critères de recherche.")
+        st.warning("Aucun événement disponible avec des recommandations.")
 else:
     st.error("Impossible de charger les données. Veuillez vérifier les fichiers de données.")
 
 # Ajouter des informations dans le pied de page
-st.sidebar.markdown("---")
-st.sidebar.caption("Système de recommandation basé sur la similarité des événements.")
-st.sidebar.caption("Développé avec Streamlit et scikit-learn.")
+st.caption("© 2025 ByTheWay. Tous droits réservés.")
